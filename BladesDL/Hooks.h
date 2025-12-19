@@ -8,5 +8,6 @@ VOID SetupLoaderPrepHook();
 VOID SetupDNSHook();
 VOID SetupXamCheckExecPrivHook();
 VOID SetupkeBugCheckExHook();
+VOID SetupLoadImageHook();
 
 #endif // _HOOKS_H

@@ -8,6 +8,65 @@
 #define XBOX_XEX		"\\Device\\Harddisk0\\SystemPartition\\Compatibility"
 #define DASH_XEX		"\\SystemRoot\\dash.xex"
 
+void toggleMemProtection(char * xex)
+{
+	if (strncmp(xex, XBOX_XEX, strlen(XBOX_XEX)) == 0)
+	{
+		//HvxSetState(SET_PROT_ON);
+		HvxGetVersions(FREEBOOT_SYSCALL_KEY, SET_PROT_ON);
+		g_Protection = PROTECT_ON;
+		__dcbst(0, &g_Protection);
+		__sync();
+	}
+	else if (strcmp(xex, DASH_XEX) == 0)
+	{
+		if (g_Protection)
+		{
+			//HvxSetState(SET_PROT_OFF);
+			HvxGetVersions(FREEBOOT_SYSCALL_KEY, SET_PROT_OFF);
+			g_Protection = PROTECT_OFF;
+			__dcbst(0, &g_Protection);
+			__sync();
+		}
+	}
+}
+
+#define KERNEL_XEXP_LOAD_IMAGE_ADDR_1888 0x80065948
+
+#define LOADIMAGESAVE_VAL 2
+typedef NTSTATUS (*XEXPLOADIMAGEFUN)(LPCSTR xexName, DWORD typeInfo, DWORD ver, PHANDLE modHandle); // XexpLoadImage
+VOID __declspec(naked) XexpLoadImageSaveVar(VOID)
+{
+	__asm{
+		li r3, LOADIMAGESAVE_VAL //make this unique for each hook
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		blr
+	}
+}
+
+XEXPLOADIMAGEFUN XexpLoadImageSave = (XEXPLOADIMAGEFUN)XexpLoadImageSaveVar;
+NTSTATUS XexpLoadImageHook(LPCSTR xex, DWORD typeInfo, DWORD ver, PHANDLE modHandle)
+{
+   toggleMemProtection((char *)xex);
+
+   return XexpLoadImageSave(xex, typeInfo, ver, modHandle);
+}
+
+VOID SetupLoadImageHook()
+{
+
+	//Byrom_Dbg("[HOOK] Applying LoaderPrep Hook...");
+	cprintf("[BladesDL] [HOOK] Applying XexpLoadImage Hook...");
+	// using this to catch dash.xex and xbox emu loading
+	hookFunctionStart((PDWORD)KERNEL_XEXP_LOAD_IMAGE_ADDR_1888, (PDWORD)XexpLoadImageSave, (DWORD)XexpLoadImageHook);
+}
+
+
 #define LoaderPrep_Addr_6670	0x818DA950 // TitleLoaderPrepareLoadExecutableFile
 
 #define LOADPREPSAVE_VAL	1
@@ -29,28 +88,10 @@ LOADPREPSAVEFUN loadPrepSave = (LOADPREPSAVEFUN)loadPrepSaveVar;
 
 DWORD LoaderPrepHook(DWORD argR3, const char* xex, DWORD argR5, PVOID handle, DWORD typeinfo, DWORD ver, DWORD argR9, DWORD argR10, DWORD argSt1)
 {
-	char* xexname = (char*)xex;
 	//DbgPrint("loadPrep r3: %08x r4:'%s' r5: %08x hand: %08x typ: %08x ver: %08x r9: %08x r10: %08x st1: %08x\n", argR3, xexname, argR5, handle, typeinfo, ver, argR9, argR10, argSt1);
-	if (strncmp(xexname, XBOX_XEX, strlen(XBOX_XEX)) == 0)
-	{
-		//HvxSetState(SET_PROT_ON);
-		HvxGetVersions(FREEBOOT_SYSCALL_KEY, SET_PROT_ON);
-		g_Protection = PROTECT_ON;
-		__dcbst(0, &g_Protection);
-		__sync();
-	}
-	else if (strcmp(xex, DASH_XEX) == 0)
-	{
-		if (g_Protection)
-		{
-			//HvxSetState(SET_PROT_OFF);
-			HvxGetVersions(FREEBOOT_SYSCALL_KEY, SET_PROT_OFF);
-			g_Protection = PROTECT_OFF;
-			__dcbst(0, &g_Protection);
-			__sync();
-		}
-	}
-	return loadPrepSave(argR3, xexname, argR5, handle, typeinfo, ver, argR9, argR10, argSt1);
+	toggleMemProtection((char*)xex);
+
+	return loadPrepSave(argR3, (char *)xex, argR5, handle, typeinfo, ver, argR9, argR10, argSt1);
 }
 
 VOID SetupLoaderPrepHook()
