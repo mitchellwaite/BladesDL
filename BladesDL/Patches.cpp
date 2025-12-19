@@ -50,6 +50,28 @@ VOID ApplyPingPatch()
 	}
 
 	ptr[0] = 0x60000000;
-	doSync(ptr);
+	doSync(ptr);	
+}
+
+VOID PatchBlockLIVE(){
+	cprintf("[BladesDL] [PatchBlockLIVE] Applying LiveBlock patch to XAM");
+
+	char* nullStr = "NO.%sNO.NO\0";
+	DWORD nullStrSize = 18;
+
+	if(XboxKrnlVersion->Build == 1888)
+	{
+		// null out xbox live dns tags in xam. This is basically what RGLoader does
+		// for its live block setting, except 1888 has fewer strings to patch
+		memcpy((LPVOID)0x81885A80, (LPCVOID)nullStr, nullStrSize); // notice.%sxbox.com
+		memcpy((LPVOID)0x81885A94, (LPCVOID)nullStr, nullStrSize); // xeds.%sxboxlive.com
+		memcpy((LPVOID)0x81885AAC, (LPCVOID)nullStr, nullStrSize); // xetgs.%sxboxlive.com
+		memcpy((LPVOID)0x81885AC4, (LPCVOID)nullStr, nullStrSize); // xeas.%sxboxlive.com
+		memcpy((LPVOID)0x81885AD8, (LPCVOID)nullStr, nullStrSize); // xemacs.%sxboxlive.com
+	}
+	else
+	{
+		cprintf("[BladesDL] [PatchBlockLIVE] Unsupported kernel: %d", XboxKrnlVersion->Build);
+	}
 }
 
