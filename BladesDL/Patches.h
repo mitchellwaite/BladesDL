@@ -6,7 +6,6 @@
 
 VOID PatchUpdStrings(VOID);
 VOID ApplyPingPatch(VOID);
-VOID PatchBlockLIVE(VOID);
 
 #define PING_PATCH_ADDR_6770 0x81947D38
 #define PING_PATCH_ADDR_1888 0x819B9048

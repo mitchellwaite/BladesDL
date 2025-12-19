@@ -52,3 +52,4 @@ VOID ApplyPingPatch()
 	ptr[0] = 0x60000000;
 	doSync(ptr);
 }
+
