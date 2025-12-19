@@ -20,24 +20,8 @@ BOOL WINAPI DllMain(HANDLE hInstDLL, DWORD fdwReason, LPVOID lpReserved)
 	{
 	case DLL_PROCESS_ATTACH:
 		cprintf("[BladesDL] Loaded!");
-		
-		if(XboxKrnlVersion->Build == 1888)
-		{
-			// Xam hooks cause a bugcheck on 1888, so we'll patch the DNS
-			// strings like RGLoader and hook the kernel instead
-			PatchBlockLIVE();
-			SetupLoadImageHook();
-		}
-		else if(XboxKrnlVersion->Build == 6717)
-		{
-			SetupDNSHook();
-			SetupLoaderPrepHook();
-		}
-		else
-		{
-			cprintf("[BladesDL] Unsupported kernel version %d, not applying LoaderPrep hook or DNS patch", XboxKrnlVersion->Build);
-		}
-
+		SetupDNSHook();
+		SetupMemoryProtectionToggleHook();
 		SetupkeBugCheckExHook();
 		SetupXamCheckExecPrivHook();
 		PatchUpdStrings();
