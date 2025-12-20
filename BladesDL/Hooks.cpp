@@ -28,8 +28,7 @@ void toggleMemProtection(char * xex)
 	}
 }
 
-typedef NTSTATUS (*XEXPLOADIMAGEFUN)(LPCSTR xexName, DWORD typeInfo, DWORD ver, PHANDLE modHandle); // XexpLoadImage
-VOID __declspec(naked) XexpLoadImageSaveVar(VOID)
+VOID __declspec(naked) MemProtToggleSaveVar(VOID)
 {
 	__asm{
 		li r3, MEM_PROT_TOGGLE_VAL
@@ -43,7 +42,9 @@ VOID __declspec(naked) XexpLoadImageSaveVar(VOID)
 	}
 }
 
-XEXPLOADIMAGEFUN XexpLoadImageSave = (XEXPLOADIMAGEFUN)XexpLoadImageSaveVar;
+typedef NTSTATUS (*XEXPLOADIMAGEFUN)(LPCSTR xexName, DWORD typeInfo, DWORD ver, PHANDLE modHandle); // XexpLoadImage
+XEXPLOADIMAGEFUN XexpLoadImageSave = (XEXPLOADIMAGEFUN)MemProtToggleSaveVar;
+
 NTSTATUS XexpLoadImageHook(LPCSTR xex, DWORD typeInfo, DWORD ver, PHANDLE modHandle)
 {
    toggleMemProtection((char *)xex);
@@ -52,20 +53,7 @@ NTSTATUS XexpLoadImageHook(LPCSTR xex, DWORD typeInfo, DWORD ver, PHANDLE modHan
 }
 
 typedef DWORD(*LOADPREPSAVEFUN)(DWORD argR3, char* xex, DWORD argR5, PVOID handle, DWORD typeinfo, DWORD ver, DWORD argR9, DWORD argR10, DWORD argSt1);
-VOID __declspec(naked) loadPrepSaveVar(VOID)
-{
-	__asm {
-		li r3, MEM_PROT_TOGGLE_VAL
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		blr
-	}
-}
-LOADPREPSAVEFUN loadPrepSave = (LOADPREPSAVEFUN)loadPrepSaveVar;
+LOADPREPSAVEFUN loadPrepSave = (LOADPREPSAVEFUN)MemProtToggleSaveVar;
 
 DWORD LoaderPrepHook(DWORD argR3, const char* xex, DWORD argR5, PVOID handle, DWORD typeinfo, DWORD ver, DWORD argR9, DWORD argR10, DWORD argSt1)
 {
