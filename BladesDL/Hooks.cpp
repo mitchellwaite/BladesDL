@@ -89,7 +89,6 @@ VOID SetupMemoryProtectionToggleHook()
 //		NetDll_XNetDnsLookup Hook
 //=============================================================================================================================================
 #pragma region LiveBlock
-
 typedef DWORD(*DNSLOOKUPSAVEFUN)(XNCALLER_TYPE xnc, const char* pszHost, WSAEVENT hEvent, XNDNS** ppxndns);
 VOID __declspec(naked) DnsLookupSaveVar(VOID)
 {
