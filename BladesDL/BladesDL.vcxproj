@@ -97,8 +97,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_LTCG|Xbox 360'">
     <LinkIncremental>false</LinkIncremental>
-    <ImageXexOutput>$(OutDir)BDL.xex</ImageXexOutput>
+    <ImageXexOutput>$(OutDir)launch.xex</ImageXexOutput>
     <LibraryPath>C:\Users\m_byr\Desktop\Xbox Plugin Projects\NiNJA UI Extension\atg;$(LibraryPath)</LibraryPath>
+    <OutputFile>$(OutDir)launch.dll</OutputFile>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">
     <ClCompile>
@@ -246,6 +247,9 @@
     <ImageXex>
       <ConfigurationFile>BladesDL.xml</ConfigurationFile>
     </ImageXex>
+    <PostBuildEvent>
+      <Command>xextool -m d -e u -c u $(OutDir)launch.xex</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Hooks.h" />

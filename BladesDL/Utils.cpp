@@ -13,6 +13,16 @@ QWORD __declspec(naked) HvxGetVersions(DWORD magic, DWORD mode, UINT64 dest, UIN
 	}
 }
 
+ULONG __declspec(naked) HvxPostOutput(ULONG r3)
+{
+    _asm
+    {
+        li      r0, 0xD
+        sc
+        blr
+    }
+}
+
 #define SYS_STRING "\\System??\\%s"
 #define USR_STRING "\\??\\%s"
 
@@ -441,6 +451,45 @@ void cprintf(const char* s, ...)
 	//delete[] temp;
 	KfReleaseSpinLock(&g_spinvar, irql);
 	//Sleep(20);
+}
+
+uint64_t GetHVTargetAddress(uint32_t address)
+{
+    if (address >= 0x00000 && address < 0x10000)
+        return 0x8000010000000000 |  address;
+    else if (address >= 0x10000 && address < 0x20000)
+        return 0x8000010200000000 |  address;
+    else if (address >= 0x20000 && address < 0x30000)
+        return 0x8000010400000000 |  address;
+    else if (address >= 0x30000 && address < 0x40000)
+        return 0x8000010600000000 |  address;
+    else
+        return 0x8000030000000000 |  address;
+}
+
+void ReadHypervisor(void *userland_data, uint32_t hv_address, size_t length)
+{
+    // get the hypervisor address to patch
+    uint64_t hv_target = GetHVTargetAddress(hv_address);
+    // allocate some physical memory for the memcpy to copy to
+    uint8_t *data_buf = (uint8_t *)XPhysicalAlloc(0x1000, MAXULONG_PTR, 0, PAGE_READWRITE);
+    uint64_t data_addr = 0x8000000000000000 | (uint32_t)MmGetPhysicalAddress(data_buf);
+    // decide which syscall to use
+    HvxGetVersions(0x72627472, 5, hv_target, data_addr, length);
+    memcpy(userland_data, data_buf, length);
+    XPhysicalFree(data_buf);
+}
+
+void WriteHypervisor(void  *userland_data, uint32_t hv_address, size_t length)
+{
+    // get the hypervisor address to patch
+    uint64_t hv_target = GetHVTargetAddress(hv_address);
+    // allocate some physical memory for the memcpy to copy to
+    uint8_t *data_buf = (uint8_t *)XPhysicalAlloc(0x1000, MAXULONG_PTR, 0, PAGE_READWRITE);
+	uint64_t data_addr = 0x8000000000000000 | (uint32_t)MmGetPhysicalAddress(data_buf);
+	memcpy(data_buf,userland_data,length);
+	HvxGetVersions(0x72627472, 5, data_addr, hv_target, length);
+	XPhysicalFree(data_buf);
 }
 
 #pragma warning(pop)

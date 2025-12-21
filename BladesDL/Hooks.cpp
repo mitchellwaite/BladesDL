@@ -4,7 +4,6 @@
 //		Hook used to catch the XB1 emulator load
 //		Will toggle the Mem protection on/off to prevent the crash
 //=============================================================================================================================================
-#pragma region OGXFix
 void toggleMemProtection(char * xex)
 {
 	if (strncmp(xex, XBOX_XEX, strlen(XBOX_XEX)) == 0)
@@ -28,6 +27,36 @@ void toggleMemProtection(char * xex)
 	}
 }
 
+void toggleFallbackXexKeyOnFailure()
+{
+	// To be called by the XexpLoadImage and XexpVerifyHeaders hooks to toggle the
+	// fallback xex key (when XeCryptBnQwBeSigVerify in the HV returns 0)
+
+	// 38 80 00 54 - li %r4, 0x54
+	// 38 80 00 F0 - li %r4, 0xF0
+	// My ghetto set of FreeBoot patches puts the fallback li at 0x1620 in HV space
+	// It should always be one of those two hex values
+	uint32_t li_key_inst = 0;
+
+	ReadHypervisor(&li_key_inst, 0x162C, 0x4);
+
+	if(li_key_inst == 0x38800054)
+	{
+		// We failed to load the xex with the retail key as fallback.
+		// try again with the devkit key
+		li_key_inst = 0x388000F0;
+		WriteHypervisor(&li_key_inst, 0x162C, 0x4);
+	}
+	else if(li_key_inst == 0x388000F0)
+	{
+		// We failed to load the xex with the devkit key as fallback.
+		// try again with the retail key
+		li_key_inst = 0x38800054;
+		WriteHypervisor(&li_key_inst, 0x162C, 0x4);
+	}
+}
+
+#pragma region OGXFix
 VOID __declspec(naked) MemProtToggleSaveVar(VOID)
 {
 	__asm{
@@ -49,7 +78,15 @@ NTSTATUS XexpLoadImageHook(LPCSTR xex, DWORD typeInfo, DWORD ver, PHANDLE modHan
 {
    toggleMemProtection((char *)xex);
 
-   return XexpLoadImageSave(xex, typeInfo, ver, modHandle);
+   NTSTATUS ret = XexpLoadImageSave(xex, typeInfo, ver, modHandle);
+
+   if( !NT_SUCCESS(ret) )
+   {
+	   toggleFallbackXexKeyOnFailure();
+	   return XexpLoadImageSave(xex, typeInfo, ver, modHandle);
+   }
+
+   return ret;
 }
 
 typedef DWORD(*LOADPREPSAVEFUN)(DWORD argR3, char* xex, DWORD argR5, PVOID handle, DWORD typeinfo, DWORD ver, DWORD argR9, DWORD argR10, DWORD argSt1);
@@ -83,6 +120,50 @@ VOID SetupMemoryProtectionToggleHook()
 }
 #pragma endregion
 //=============================================================================================================================================
+
+#pragma region XexpVerifyImageHeaderToggle
+VOID __declspec(naked) XexpVerifyImageHeadersSaveVar(VOID)
+{
+	__asm{
+		li r3, XEXP_VERIFY_HEADER_VAL
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		blr
+	}
+}
+
+typedef NTSTATUS (*XEXPVERIFYIMAGEHEADERSFUN)(PHANDLE modHandle); // XexpVerifyImageHeaders
+XEXPVERIFYIMAGEHEADERSFUN XexpVerifyImageHeadersSave = (XEXPVERIFYIMAGEHEADERSFUN)XexpVerifyImageHeadersSaveVar;
+
+NTSTATUS XexpVerifyImageHeadersHook(PHANDLE modHandle)
+{
+   NTSTATUS ret = XexpVerifyImageHeadersSave(modHandle);
+
+   if( !NT_SUCCESS(ret) )
+   {
+	   toggleFallbackXexKeyOnFailure();
+
+	   return XexpVerifyImageHeadersSave(modHandle);
+   }
+
+   return ret;
+}
+
+VOID SetupHeaderVerificationToggleHook()
+{
+	// using this to catch dash.xex and xbox emu loading
+	if(XboxKrnlVersion->Build == 1888)
+	{
+		cprintf("[BladesDL] [HOOK] Applying XexpLoadImage Hook...");
+		hookFunctionStart((PDWORD)KERNEL_XEXP_VERIFY_HEADER_ADDR_1888, (PDWORD)XexpVerifyImageHeadersSave, (DWORD)XexpVerifyImageHeadersHook);
+	}
+}
+#pragma endregion
+
 
 //=============================================================================================================================================
 //		LIVEBLOCK

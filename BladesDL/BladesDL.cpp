@@ -12,6 +12,16 @@
 #include "stdafx.h"
 #include "BladesDL.h"
 
+// version and launch helper data structure
+extern ldata ldat = {
+	LAUNCH_DATA_ID,	// DWORD ID;
+	LHELPER_CON,	// DWORD ltype;
+	"",				// char link[MAX_PATH];
+	"",				// char dev[MAX_PATH];
+	VER_MAJ,		// USHORT versionMaj;
+	VER_MIN,		// USHORT versionMin;
+	TARGET_KERNEL	// USHORT targetKernel;
+};
 
 BOOL WINAPI DllMain(HANDLE hInstDLL, DWORD fdwReason, LPVOID lpReserved)
 {
@@ -22,6 +32,7 @@ BOOL WINAPI DllMain(HANDLE hInstDLL, DWORD fdwReason, LPVOID lpReserved)
 		cprintf("[BladesDL] Loaded!");
 		SetupDNSHook();
 		SetupMemoryProtectionToggleHook();
+		SetupHeaderVerificationToggleHook();
 		SetupkeBugCheckExHook();
 		SetupXamCheckExecPrivHook();
 		PatchUpdStrings();

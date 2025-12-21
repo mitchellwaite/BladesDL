@@ -24,6 +24,9 @@ extern DWORD g_Protection; // 1 = on, 0 = off
 #define SET_PROT_ON		3
 
 QWORD HvxGetVersions(DWORD magic, DWORD mode, UINT64 dest = NULL, UINT64 src = NULL, UINT32 len = NULL, UINT64 arg_r8 = NULL);
+ULONG HvxPostOutput(ULONG r3);
+void ReadHypervisor(void *userland_data, uint32_t hv_address, size_t length);
+void WriteHypervisor(void  *userland_data, uint32_t hv_address, size_t length);
 //=============================================================================================================================================
 
 

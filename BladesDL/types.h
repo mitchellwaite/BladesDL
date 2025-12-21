@@ -7,10 +7,14 @@
 
 
 typedef unsigned char		u8;
+typedef unsigned char		uint8_t;
 typedef unsigned short		u16;
+typedef unsigned short		uint16_t;
 typedef unsigned int		u32;
+typedef unsigned int		uint32_t;
 typedef unsigned __int64	u64;
 typedef unsigned __int64	QWORD;
+typedef unsigned __int64	uint64_t;
 
 typedef signed char			s8;
 typedef signed short		s16;

@@ -342,6 +342,14 @@ extern "C" {
 	);
 
 	NTSYSAPI
+	PVOID
+	EXPORTNUM(190)
+	NTAPI
+	MmGetPhysicalAddress(
+		IN PVOID Address
+	);
+
+	NTSYSAPI
 	EXPORTNUM(224)
 	NTSTATUS
 	NTAPI
