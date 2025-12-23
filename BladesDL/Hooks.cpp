@@ -38,7 +38,25 @@ void toggleFallbackXexKeyOnFailure()
 	// It should always be one of those two hex values
 	uint32_t li_key_inst = 0;
 
-	ReadHypervisor(&li_key_inst, 0x162C, 0x4);
+	int hv_addr = 0;
+
+	if(XboxKrnlVersion->Build == 1888)
+	{
+		hv_addr = 0x162C;
+	}
+	else if(XboxKrnlVersion->Build == 6717 || XboxKrnlVersion->Build == 6770)
+	{
+		// TODO I don't have the patch set for 6770 handy, so i'm assuming
+		// the same patch set is in use because the code in the HV is identical
+		hv_addr = 0x3DD8;
+	}
+	else
+	{
+		// We don't know what address to toggle, yolo
+		return;
+	}
+
+	ReadHypervisor(&li_key_inst, hv_addr, 0x4);
 
 	if(li_key_inst == 0x38800054)
 	{
@@ -76,17 +94,17 @@ XEXPLOADIMAGEFUN XexpLoadImageSave = (XEXPLOADIMAGEFUN)MemProtToggleSaveVar;
 
 NTSTATUS XexpLoadImageHook(LPCSTR xex, DWORD typeInfo, DWORD ver, PHANDLE modHandle)
 {
-   toggleMemProtection((char *)xex);
+	toggleMemProtection((char *)xex);
 
-   NTSTATUS ret = XexpLoadImageSave(xex, typeInfo, ver, modHandle);
+	NTSTATUS ret = XexpLoadImageSave(xex, typeInfo, ver, modHandle);
 
-   if( !NT_SUCCESS(ret) )
-   {
-	   toggleFallbackXexKeyOnFailure();
-	   return XexpLoadImageSave(xex, typeInfo, ver, modHandle);
-   }
+	if( !NT_SUCCESS(ret) )
+	{
+		toggleFallbackXexKeyOnFailure();
+		return XexpLoadImageSave(xex, typeInfo, ver, modHandle);
+	}
 
-   return ret;
+	return ret;
 }
 
 typedef DWORD(*LOADPREPSAVEFUN)(DWORD argR3, char* xex, DWORD argR5, PVOID handle, DWORD typeinfo, DWORD ver, DWORD argR9, DWORD argR10, DWORD argSt1);
@@ -97,7 +115,15 @@ DWORD LoaderPrepHook(DWORD argR3, const char* xex, DWORD argR5, PVOID handle, DW
 	//DbgPrint("loadPrep r3: %08x r4:'%s' r5: %08x hand: %08x typ: %08x ver: %08x r9: %08x r10: %08x st1: %08x\n", argR3, xexname, argR5, handle, typeinfo, ver, argR9, argR10, argSt1);
 	toggleMemProtection((char*)xex);
 
-	return loadPrepSave(argR3, (char *)xex, argR5, handle, typeinfo, ver, argR9, argR10, argSt1);
+	NTSTATUS ret = loadPrepSave(argR3, (char *)xex, argR5, handle, typeinfo, ver, argR9, argR10, argSt1);
+
+	if( NT_SUCCESS(ret) )
+	{
+		toggleFallbackXexKeyOnFailure();
+		return loadPrepSave(argR3, (char *)xex, argR5, handle, typeinfo, ver, argR9, argR10, argSt1);
+	}
+
+	return ret;
 }
 
 VOID SetupMemoryProtectionToggleHook()
@@ -111,7 +137,12 @@ VOID SetupMemoryProtectionToggleHook()
 	else if(XboxKrnlVersion->Build == 6770)
 	{
 		cprintf("[BladesDL] [HOOK] Applying LoaderPrep Hook...");
-		hookFunctionStart((PDWORD)XAM_LOADERPREP_ADDR_6670, (PDWORD)loadPrepSave, (DWORD)LoaderPrepHook);
+		hookFunctionStart((PDWORD)XAM_LOADERPREP_ADDR_6770, (PDWORD)loadPrepSave, (DWORD)LoaderPrepHook);
+	}
+	else if(XboxKrnlVersion->Build == 6717)
+	{
+		cprintf("[BladesDL] [HOOK] Applying LoaderPrep Hook...");
+		hookFunctionStart((PDWORD)XAM_LOADERPREP_ADDR_6717, (PDWORD)loadPrepSave, (DWORD)LoaderPrepHook);
 	}
 	else
 	{
@@ -141,16 +172,33 @@ XEXPVERIFYIMAGEHEADERSFUN XexpVerifyImageHeadersSave = (XEXPVERIFYIMAGEHEADERSFU
 
 NTSTATUS XexpVerifyImageHeadersHook(PHANDLE modHandle)
 {
-   NTSTATUS ret = XexpVerifyImageHeadersSave(modHandle);
+	NTSTATUS ret = XexpVerifyImageHeadersSave(modHandle);
 
-   if( !NT_SUCCESS(ret) )
-   {
-	   toggleFallbackXexKeyOnFailure();
+	if( !NT_SUCCESS(ret) )
+	{
+		toggleFallbackXexKeyOnFailure();
 
-	   return XexpVerifyImageHeadersSave(modHandle);
-   }
+		return XexpVerifyImageHeadersSave(modHandle);
+	}
 
-   return ret;
+	return ret;
+}
+
+typedef NTSTATUS (*XEXPVERIFYXEXHEADERSFUN)(QWORD param_1, QWORD param_2, PDWORD param_3); // XexpVerifyXexHeaders
+XEXPVERIFYXEXHEADERSFUN XexpVerifyXexHeadersSave = (XEXPVERIFYXEXHEADERSFUN)XexpVerifyImageHeadersSaveVar;
+
+NTSTATUS XexpVerifyXexHeadersHook(QWORD param_1, QWORD param_2, PDWORD param_3)
+{
+	NTSTATUS ret = XexpVerifyXexHeadersSave(param_1, param_2, param_3);
+
+	if( !NT_SUCCESS(ret) )
+	{
+		toggleFallbackXexKeyOnFailure();
+
+		return XexpVerifyXexHeadersSave(param_1, param_2, param_3);
+	}
+
+	return ret;
 }
 
 VOID SetupHeaderVerificationToggleHook()
@@ -158,8 +206,17 @@ VOID SetupHeaderVerificationToggleHook()
 	// using this to catch dash.xex and xbox emu loading
 	if(XboxKrnlVersion->Build == 1888)
 	{
-		cprintf("[BladesDL] [HOOK] Applying XexpLoadImage Hook...");
+		cprintf("[BladesDL] [HOOK] Applying XexpVerifyImageHeaders Hook...");
 		hookFunctionStart((PDWORD)KERNEL_XEXP_VERIFY_HEADER_ADDR_1888, (PDWORD)XexpVerifyImageHeadersSave, (DWORD)XexpVerifyImageHeadersHook);
+	}
+	else if(XboxKrnlVersion->Build == 6717 || XboxKrnlVersion->Build == 6770)
+	{
+		cprintf("[BladesDL] [HOOK] Applying XexpVerifyXexHeaders Hook...");
+		hookFunctionStart((PDWORD)KERNEL_XEXP_VERIFY_HEADER_ADDR_6717_6770, (PDWORD)XexpVerifyXexHeadersSave, (DWORD)XexpVerifyXexHeadersHook);
+	}
+	else
+	{
+		cprintf("[BladesDL] [HOOK] Unsupported kernel: %d, skipping header verification hook", XboxKrnlVersion->Build);
 	}
 }
 #pragma endregion
