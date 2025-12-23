@@ -99,4 +99,32 @@ VOID ApplyContentPatch()
 	__dcbst(0, ptr);
 	__sync();
 	__isync();
+
+	if(XboxKrnlVersion->Build == 1888)
+	{
+		ptr = (PDWORD)XCONTENT_GET_LIC_MASK_ADDR_1888;
+	}
+	else if(XboxKrnlVersion->Build == 6717)
+	{
+		ptr = (PDWORD)XCONTENT_GET_LIC_MASK_ADDR_6717;
+	}
+	else if(XboxKrnlVersion->Build == 6770)
+	{
+		ptr = (PDWORD)XCONTENT_GET_LIC_MASK_ADDR_6770;
+	}
+	else
+	{
+		cprintf("[BladesDL] [xblapatch] Unsupported kernel: %d", XboxKrnlVersion->Build);
+		return;
+	}
+
+   // Patch out XContent::GetLicenseMask
+	ptr[0] = 0x3960FFFF; // li %r11, 0xFFFF
+	ptr[1] = 0x91630000; // stw %r11, 0(%r3)
+	ptr[2] = 0x38600000; // li r3, 0
+	ptr[3] = 0x4E800020; // blr
+	__dcbst(0, ptr);
+	__sync();
+	__isync();
+
 }
