@@ -39,6 +39,10 @@ VOID ApplyPingPatch()
 	{
 		ptr = (PDWORD)PING_PATCH_ADDR_1888;
 	}
+	else if(XboxKrnlVersion->Build == 6717)
+	{
+		ptr = (PDWORD)PING_PATCH_ADDR_6717;	
+	}
 	else if(XboxKrnlVersion->Build == 6770)
 	{
 		ptr = (PDWORD)PING_PATCH_ADDR_6770;
@@ -53,3 +57,46 @@ VOID ApplyPingPatch()
 	doSync(ptr);
 }
 
+VOID ApplyContentPatch()
+{
+	PDWORD ptr = NULL;
+
+	cprintf("[BladesDL] [contpatch] Removing content license restrictions");
+
+	// patch by mojobojo @ xboxhacker
+	ptr = (PDWORD)resolveFunct(MODULE_XAM, XAM_CONTENT_GET_LIC_MASK_ORD);
+	ptr[0] = 0x3960FFFF; // li %r11, 0xFFFF
+	ptr[1] = 0x91630000; // stw %r11, 0(%r3)
+	ptr[2] = 0x38600000; // li r3, 0
+	ptr[3] = 0x4E800020; // blr
+	__dcbst(0, ptr);
+	__sync();
+	__isync();
+
+	
+	if(XboxKrnlVersion->Build == 1888)
+	{
+		ptr = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_1888;
+	}
+	else if(XboxKrnlVersion->Build == 6717)
+	{
+		ptr = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_6717;
+	}
+	else if(XboxKrnlVersion->Build == 6770)
+	{
+		ptr = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_6770;
+	}
+	else
+	{
+		cprintf("[BladesDL] [contpatch part 2] Unsupported kernel: %d", XboxKrnlVersion->Build);
+		return;
+	}
+
+	// patch within XContent::ContentEvaluateLicense
+	ptr[0] = 0x3D60FFFF; // lis %r11, 0xFFFF
+	ptr[1] = 0x3B800000; // li %r28, 0
+	ptr[2] = 0x617EFFFF; // ori %r30, %r11, 0xFFFF
+	__dcbst(0, ptr);
+	__sync();
+	__isync();
+}

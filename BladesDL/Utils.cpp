@@ -453,6 +453,10 @@ void cprintf(const char* s, ...)
 	//Sleep(20);
 }
 
+//
+// Borrowed these functions from FreeMyXe:
+// https://github.com/FreeMyXe/FreeMyXe/blob/master/extras/OGXboxPrep/source/OGXboxPrep.c
+//
 uint64_t GetHVTargetAddress(uint32_t address)
 {
     if (address >= 0x00000 && address < 0x10000)

@@ -37,6 +37,7 @@ BOOL WINAPI DllMain(HANDLE hInstDLL, DWORD fdwReason, LPVOID lpReserved)
 		SetupXamCheckExecPrivHook();
 		PatchUpdStrings();
 		ApplyPingPatch();
+		ApplyContentPatch();
 
 		cprintf("[BladesDL] Init complete!");
 		break;

@@ -20,6 +20,7 @@ A basic Dashlaunch substitute for Blades kernel. Performs some of the basic task
 
 - 6717 support... should be simple
 - Plugins? not that many would work, but a debugging plugin might be useful
+- contpatch, licpatch, xblapatch, etc. The leaked DashLaunch source only has contpatch so we'll see.
 
 ## Credits
 
