@@ -87,33 +87,42 @@ VOID ApplyXamContentGetLicMaskPatch()
 // TODO 
 VOID ApplyXContentContentEvaluateLicensePatch()
 {
-   PDWORD ptr = NULL;
+	PDWORD ptr_rtn = NULL;
+	PDWORD ptr_arc = NULL;
 
 	if(XboxKrnlVersion->Build == 1888)
 	{
-		ptr = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_1888;
+		ptr_rtn = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_1888;
+		ptr_arc = (PDWORD)XAM_CONTENT_EVAL_LIC_UNLOCK_ADDR_1888;
 	}
-	else if(XboxKrnlVersion->Build == 6717)
+	/*else if(XboxKrnlVersion->Build == 6717)
 	{
 		ptr = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_6717;
 	}
 	else if(XboxKrnlVersion->Build == 6770)
 	{
 		ptr = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_6770;
-	}
+	}*/
 	else
 	{
 		cprintf("[BladesDL] [contpatch] Unsupported kernel, unable to patch XContent::ContentEvaluateLicense");
 		return;
 	}
 
-   cprintf("[BladesDL] [contpatch] Patching XContent::ContentEvaluateLicense");
+	cprintf("[BladesDL] [contpatch] Patching XContent::ContentEvaluateLicense return value");
 
-	ptr[0] = 0x3D60FFFF; // lis %r11, 0xFFFF
-	ptr[1] = 0x3B800000; // li %r28, 0
-	ptr[2] = 0x617EFFFF; // ori %r30, %r11, 0xFFFF
-   
-	__dcbst(0, ptr);
+	ptr_rtn[0] = 0x38600000; // li r3, 0
+
+	__dcbst(0, ptr_rtn);
+	__sync();
+	__isync();
+
+	cprintf("[BladesDL] [contpatch] Patching XContent::ContentEvaluateLicense arcade licensed flag");
+
+	ptr_arc[0] = 0x39600001; // li r11, 1
+	ptr_arc[1] = 0x917F0008; // stw r11, 8(r31)
+
+	__dcbst(0, ptr_arc);
 	__sync();
 	__isync();
 
