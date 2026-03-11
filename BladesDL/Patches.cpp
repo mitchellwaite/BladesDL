@@ -57,13 +57,19 @@ VOID ApplyPingPatch()
 	doSync(ptr);
 }
 
-VOID ApplyContentPatch()
+//
+// Content Patches
+//
+
+// patch by mojobojo @ xboxhacker
+// XamContentGetLicenseMask
+// DLC/Addons will appear to be licensed
+VOID ApplyXamContentGetLicMaskPatch()
 {
-	PDWORD ptr = NULL;
+   PDWORD ptr = NULL;
 
-	cprintf("[BladesDL] [contpatch] Removing content license restrictions");
+   cprintf("[BladesDL] [contpatch] Patching XamContentGetLicenseMask");
 
-	// patch by mojobojo @ xboxhacker
 	ptr = (PDWORD)resolveFunct(MODULE_XAM, XAM_CONTENT_GET_LIC_MASK_ORD);
 	ptr[0] = 0x3960FFFF; // li %r11, 0xFFFF
 	ptr[1] = 0x91630000; // stw %r11, 0(%r3)
@@ -73,7 +79,16 @@ VOID ApplyContentPatch()
 	__sync();
 	__isync();
 
-	
+   return;
+}
+
+// patch within XContent::ContentEvaluateLicense
+// XBLA will appear to be fully licensed
+// TODO 
+VOID ApplyXContentContentEvaluateLicensePatch()
+{
+   PDWORD ptr = NULL;
+
 	if(XboxKrnlVersion->Build == 1888)
 	{
 		ptr = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_1888;
@@ -88,19 +103,30 @@ VOID ApplyContentPatch()
 	}
 	else
 	{
-		cprintf("[BladesDL] [contpatch part 2] Unsupported kernel: %d", XboxKrnlVersion->Build);
+		cprintf("[BladesDL] [contpatch] Unsupported kernel, unable to patch XContent::ContentEvaluateLicense");
 		return;
 	}
 
-	// patch within XContent::ContentEvaluateLicense
+   cprintf("[BladesDL] [contpatch] Patching XContent::ContentEvaluateLicense");
+
 	ptr[0] = 0x3D60FFFF; // lis %r11, 0xFFFF
 	ptr[1] = 0x3B800000; // li %r28, 0
 	ptr[2] = 0x617EFFFF; // ori %r30, %r11, 0xFFFF
+   
 	__dcbst(0, ptr);
 	__sync();
 	__isync();
 
-	if(XboxKrnlVersion->Build == 1888)
+   return;
+}
+
+// patch within XContent::GetLicenseMask
+// XBLA will appear to be fully licensed
+VOID ApplyXcontentGetLicenseMaskPatch()
+{
+   PDWORD ptr = NULL;
+
+   if(XboxKrnlVersion->Build == 1888)
 	{
 		ptr = (PDWORD)XCONTENT_GET_LIC_MASK_ADDR_1888;
 	}
@@ -114,11 +140,12 @@ VOID ApplyContentPatch()
 	}
 	else
 	{
-		cprintf("[BladesDL] [xblapatch] Unsupported kernel: %d", XboxKrnlVersion->Build);
+		cprintf("[BladesDL] [contpatch] Unsupported kernel, unable to patch XContent::GetLicenseMask");
 		return;
 	}
 
-   // Patch out XContent::GetLicenseMask
+   cprintf("[BladesDL] [contpatch] Patching XContent::GetLicenseMask");
+
 	ptr[0] = 0x3960FFFF; // li %r11, 0xFFFF
 	ptr[1] = 0x91630000; // stw %r11, 0(%r3)
 	ptr[2] = 0x38600000; // li r3, 0
@@ -126,5 +153,34 @@ VOID ApplyContentPatch()
 	__dcbst(0, ptr);
 	__sync();
 	__isync();
+}
 
+VOID ApplyContentPatch()
+{
+	PDWORD ptr = NULL;
+
+   cprintf("[BladesDL] [contpatch] Detected Kernel Version: %d", XboxKrnlVersion->Build);
+
+   // Patch XamContentGetLicenseMask 
+   ApplyXamContentGetLicMaskPatch();
+
+   // Patch XContent::ContentEvaluateLicense
+   ApplyXContentContentEvaluateLicensePatch();
+
+   // XContent::GetLicenseMask
+   ApplyXcontentGetLicenseMaskPatch();
+
+   // XOnlinepGetPrivilegeBit
+
+   // XamUserGetMembershipTier
+
+   // XContent::DeviceGetSerialNumber
+
+   // XContent::VerifyLicensee
+
+   // XContent::VerifySignature
+
+   // ProfileEmbeddedContent::Validate
+
+   return;
 }
