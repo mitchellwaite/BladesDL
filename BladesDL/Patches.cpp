@@ -66,9 +66,9 @@ VOID ApplyPingPatch()
 // DLC/Addons will appear to be licensed
 VOID ApplyXamContentGetLicMaskPatch()
 {
-   PDWORD ptr = NULL;
+	PDWORD ptr = NULL;
 
-   cprintf("[BladesDL] [contpatch] Patching XamContentGetLicenseMask");
+	cprintf("[BladesDL] [contpatch] Patching XamContentGetLicenseMask");
 
 	ptr = (PDWORD)resolveFunct(MODULE_XAM, XAM_CONTENT_GET_LIC_MASK_ORD);
 	ptr[0] = 0x3960FFFF; // li %r11, 0xFFFF
@@ -79,12 +79,11 @@ VOID ApplyXamContentGetLicMaskPatch()
 	__sync();
 	__isync();
 
-   return;
+	return;
 }
 
 // patch within XContent::ContentEvaluateLicense
 // XBLA will appear to be fully licensed
-// TODO 
 VOID ApplyXContentContentEvaluateLicensePatch()
 {
 	PDWORD ptr_rtn = NULL;
@@ -95,14 +94,16 @@ VOID ApplyXContentContentEvaluateLicensePatch()
 		ptr_rtn = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_1888;
 		ptr_arc = (PDWORD)XAM_CONTENT_EVAL_LIC_UNLOCK_ADDR_1888;
 	}
-	/*else if(XboxKrnlVersion->Build == 6717)
+	else if(XboxKrnlVersion->Build == 6717)
 	{
-		ptr = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_6717;
+		ptr_rtn = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_6717;
+		ptr_arc = (PDWORD)XAM_CONTENT_EVAL_LIC_UNLOCK_ADDR_6717;
 	}
 	else if(XboxKrnlVersion->Build == 6770)
 	{
-		ptr = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_6770;
-	}*/
+		ptr_rtn = (PDWORD)XAM_CONTENT_EVAL_LIC_ADDR_6770;
+		ptr_arc = (PDWORD)XAM_CONTENT_EVAL_LIC_UNLOCK_ADDR_6770;
+	}
 	else
 	{
 		cprintf("[BladesDL] [contpatch] Unsupported kernel, unable to patch XContent::ContentEvaluateLicense");
@@ -111,7 +112,7 @@ VOID ApplyXContentContentEvaluateLicensePatch()
 
 	cprintf("[BladesDL] [contpatch] Patching XContent::ContentEvaluateLicense return value");
 
-	ptr_rtn[0] = 0x38600000; // li r3, 0
+	ptr_rtn[0] = 0x38600000; // li r3, 0 (ERROR_SUCCESS)
 
 	__dcbst(0, ptr_rtn);
 	__sync();
@@ -126,16 +127,16 @@ VOID ApplyXContentContentEvaluateLicensePatch()
 	__sync();
 	__isync();
 
-   return;
+	return;
 }
 
 // patch within XContent::GetLicenseMask
 // XBLA will appear to be fully licensed
 VOID ApplyXcontentGetLicenseMaskPatch()
 {
-   PDWORD ptr = NULL;
+	PDWORD ptr = NULL;
 
-   if(XboxKrnlVersion->Build == 1888)
+	if(XboxKrnlVersion->Build == 1888)
 	{
 		ptr = (PDWORD)XCONTENT_GET_LIC_MASK_ADDR_1888;
 	}
@@ -153,7 +154,7 @@ VOID ApplyXcontentGetLicenseMaskPatch()
 		return;
 	}
 
-   cprintf("[BladesDL] [contpatch] Patching XContent::GetLicenseMask");
+	cprintf("[BladesDL] [contpatch] Patching XContent::GetLicenseMask");
 
 	ptr[0] = 0x3960FFFF; // li %r11, 0xFFFF
 	ptr[1] = 0x91630000; // stw %r11, 0(%r3)
@@ -164,32 +165,125 @@ VOID ApplyXcontentGetLicenseMaskPatch()
 	__isync();
 }
 
+// Patch within XContent::EvaluateContent
+// Ignore the result from XContent::DeviceGetInfo or XContent::DeviceGetSerialNumber depending on the OS level
+VOID ApplyXcontentEvaluateContentPatch()
+{
+	PDWORD ptr = NULL;
+
+	if(XboxKrnlVersion->Build == 1888)
+	{
+		ptr = (PDWORD)XAM_EVAL_CONTENT_SERIAL_NUMBER_ADDR_1888;
+	}
+	else if(XboxKrnlVersion->Build == 6717)
+	{
+		ptr = (PDWORD)XAM_EVAL_CONTENT_SERIAL_NUMBER_ADDR_6717;
+	}
+	else if(XboxKrnlVersion->Build == 6770)
+	{
+		ptr = (PDWORD)XAM_EVAL_CONTENT_SERIAL_NUMBER_ADDR_6770;
+	}
+	else
+	{
+		cprintf("[BladesDL] [contpatch] Unsupported kernel, unable to patch XContent::EvaluateContent");
+		return;
+	}
+
+	cprintf("[BladesDL] [contpatch] Patching XContent::EvaluateContent");
+
+	ptr[0] = 0x60000000; // nop
+	__dcbst(0, ptr);
+	__sync();
+	__isync();
+}
+
+// patch out XContent::VerifyLicensee to always return true
+VOID ApplyXcontentVerifyLicenseePatch()
+{
+	PDWORD ptr = NULL;
+
+	if(XboxKrnlVersion->Build == 1888)
+	{
+		ptr = (PDWORD)XAM_XCONTENT_VERIFY_LICENSEE_ADDR_1888;
+	}
+	else if(XboxKrnlVersion->Build == 6717)
+	{
+		ptr = (PDWORD)XAM_XCONTENT_VERIFY_LICENSEE_ADDR_6717;
+	}
+	else if(XboxKrnlVersion->Build == 6770)
+	{
+		ptr = (PDWORD)XAM_XCONTENT_VERIFY_LICENSEE_ADDR_6770;
+	}
+	else
+	{
+		cprintf("[BladesDL] [contpatch] Unsupported kernel, unable to patch XContent::VerifyLicensee");
+		return;
+	}
+
+	cprintf("[BladesDL] [contpatch] Patching XContent::VerifyLicensee");
+
+	ptr[0] = 0x38600001; // li r3, 1
+	ptr[1] = 0x4E800020; // blr
+	__dcbst(0, ptr);
+	__sync();
+	__isync();
+}
+
+// Patch the error path of XContent::VerifySignature to always return "ERROR_SUCCESS"
+VOID ApplyXcontentVerifySignaturePatch()
+{
+	PDWORD ptr = NULL;
+
+	if(XboxKrnlVersion->Build == 1888)
+	{
+		ptr = (PDWORD)XAM_XCONTNET_VERIFY_SIGNATURE_ADDR_1888;
+	}
+	else if(XboxKrnlVersion->Build == 6717)
+	{
+		ptr = (PDWORD)XAM_XCONTNET_VERIFY_SIGNATURE_ADDR_6717;
+	}
+	else if(XboxKrnlVersion->Build == 6770)
+	{
+		ptr = (PDWORD)XAM_XCONTNET_VERIFY_SIGNATURE_ADDR_6770;
+	}
+	else
+	{
+		cprintf("[BladesDL] [contpatch] Unsupported kernel, unable to patch XContent::VerifySignature");
+		return;
+	}
+
+	cprintf("[BladesDL] [contpatch] Patching XContent::VerifySignature");
+
+	ptr[0] = 0x38600000; // li r3, 0
+	__dcbst(0, ptr);
+	__sync();
+	__isync();
+}
+
 VOID ApplyContentPatch()
 {
 	PDWORD ptr = NULL;
 
-   cprintf("[BladesDL] [contpatch] Detected Kernel Version: %d", XboxKrnlVersion->Build);
+	cprintf("[BladesDL] [contpatch] Detected Kernel Version: %d", XboxKrnlVersion->Build);
 
-   // Patch XamContentGetLicenseMask 
-   ApplyXamContentGetLicMaskPatch();
+	// Patch XamContentGetLicenseMask 
+	ApplyXamContentGetLicMaskPatch();
 
-   // Patch XContent::ContentEvaluateLicense
-   ApplyXContentContentEvaluateLicensePatch();
+	// Patch XContent::ContentEvaluateLicense
+	ApplyXContentContentEvaluateLicensePatch();
 
-   // XContent::GetLicenseMask
-   ApplyXcontentGetLicenseMaskPatch();
+	// XContent::GetLicenseMask
+	ApplyXcontentGetLicenseMaskPatch();
 
-   // XOnlinepGetPrivilegeBit
+	// Patch within XContent::EvaluateContent to ignore
+	// result from XContent::DeviceGetSerialNumber
+	ApplyXcontentEvaluateContentPatch();
 
-   // XamUserGetMembershipTier
+	// XContent::VerifyLicensee
+	ApplyXcontentVerifyLicenseePatch();
 
-   // XContent::DeviceGetSerialNumber
+	// XContent::VerifySignature
+	ApplyXcontentVerifySignaturePatch();
 
-   // XContent::VerifyLicensee
-
-   // XContent::VerifySignature
-
-   // ProfileEmbeddedContent::Validate
-
-   return;
+	return;
 }
