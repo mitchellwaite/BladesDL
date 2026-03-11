@@ -262,10 +262,6 @@ VOID ApplyXcontentVerifySignaturePatch()
 
 VOID ApplyContentPatch()
 {
-	PDWORD ptr = NULL;
-
-	cprintf("[BladesDL] [contpatch] Detected Kernel Version: %d", XboxKrnlVersion->Build);
-
 	// Patch XamContentGetLicenseMask 
 	ApplyXamContentGetLicMaskPatch();
 
