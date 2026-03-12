@@ -189,10 +189,15 @@ VOID SetupHeaderVerificationToggleHook()
 		cprintf("[BladesDL] [HOOK] Applying XexpVerifyImageHeaders Hook...");
 		hookFunctionStart((PDWORD)KERNEL_XEXP_VERIFY_HEADER_ADDR_1888, (PDWORD)XexpVerifyImageHeadersSave, (DWORD)XexpVerifyImageHeadersHook);
 	}
-	else if(XboxKrnlVersion->Build == 6717 || XboxKrnlVersion->Build == 6770)
+	else if(XboxKrnlVersion->Build == 6717)
 	{
 		cprintf("[BladesDL] [HOOK] Applying XexpVerifyXexHeaders Hook...");
-		hookFunctionStart((PDWORD)KERNEL_XEXP_VERIFY_HEADER_ADDR_6717_6770, (PDWORD)XexpVerifyXexHeadersSave, (DWORD)XexpVerifyXexHeadersHook);
+		hookFunctionStart((PDWORD)KERNEL_XEXP_VERIFY_HEADER_ADDR_6717, (PDWORD)XexpVerifyXexHeadersSave, (DWORD)XexpVerifyXexHeadersHook);
+	}
+	else if(XboxKrnlVersion->Build == 6770)
+	{
+		cprintf("[BladesDL] [HOOK] Applying XexpVerifyXexHeaders Hook...");
+		hookFunctionStart((PDWORD)KERNEL_XEXP_VERIFY_HEADER_ADDR_6770, (PDWORD)XexpVerifyXexHeadersSave, (DWORD)XexpVerifyXexHeadersHook);
 	}
 	else
 	{
