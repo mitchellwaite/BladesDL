@@ -63,14 +63,14 @@ void toggleFallbackXexKeyOnFailure()
 		// We failed to load the xex with the retail key as fallback.
 		// try again with the devkit key
 		li_key_inst = 0x388000F0;
-		WriteHypervisor(&li_key_inst, 0x162C, 0x4);
+		WriteHypervisor(&li_key_inst, hv_addr, 0x4);
 	}
 	else if(li_key_inst == 0x388000F0)
 	{
 		// We failed to load the xex with the devkit key as fallback.
 		// try again with the retail key
 		li_key_inst = 0x38800054;
-		WriteHypervisor(&li_key_inst, 0x162C, 0x4);
+		WriteHypervisor(&li_key_inst, hv_addr, 0x4);
 	}
 }
 
@@ -107,42 +107,22 @@ NTSTATUS XexpLoadImageHook(LPCSTR xex, DWORD typeInfo, DWORD ver, PHANDLE modHan
 	return ret;
 }
 
-typedef DWORD(*LOADPREPSAVEFUN)(DWORD argR3, char* xex, DWORD argR5, PVOID handle, DWORD typeinfo, DWORD ver, DWORD argR9, DWORD argR10, DWORD argSt1);
-LOADPREPSAVEFUN loadPrepSave = (LOADPREPSAVEFUN)MemProtToggleSaveVar;
-
-DWORD LoaderPrepHook(DWORD argR3, const char* xex, DWORD argR5, PVOID handle, DWORD typeinfo, DWORD ver, DWORD argR9, DWORD argR10, DWORD argSt1)
-{
-	//DbgPrint("loadPrep r3: %08x r4:'%s' r5: %08x hand: %08x typ: %08x ver: %08x r9: %08x r10: %08x st1: %08x\n", argR3, xexname, argR5, handle, typeinfo, ver, argR9, argR10, argSt1);
-	toggleMemProtection((char*)xex);
-
-	NTSTATUS ret = loadPrepSave(argR3, (char *)xex, argR5, handle, typeinfo, ver, argR9, argR10, argSt1);
-
-	if( NT_SUCCESS(ret) )
-	{
-		toggleFallbackXexKeyOnFailure();
-		return loadPrepSave(argR3, (char *)xex, argR5, handle, typeinfo, ver, argR9, argR10, argSt1);
-	}
-
-	return ret;
-}
-
 VOID SetupMemoryProtectionToggleHook()
 {
+	cprintf("[BladesDL] [HOOK] Applying XexpLoadImage Hook...");
+
 	// using this to catch dash.xex and xbox emu loading
 	if(XboxKrnlVersion->Build == 1888)
 	{
-		cprintf("[BladesDL] [HOOK] Applying XexpLoadImage Hook...");
 		hookFunctionStart((PDWORD)KERNEL_XEXP_LOAD_IMAGE_ADDR_1888, (PDWORD)XexpLoadImageSave, (DWORD)XexpLoadImageHook);
 	}
 	else if(XboxKrnlVersion->Build == 6770)
 	{
-		cprintf("[BladesDL] [HOOK] Applying LoaderPrep Hook...");
-		hookFunctionStart((PDWORD)XAM_LOADERPREP_ADDR_6770, (PDWORD)loadPrepSave, (DWORD)LoaderPrepHook);
+		hookFunctionStart((PDWORD)KERNEL_XEXP_LOAD_IMAGE_ADDR_6770, (PDWORD)XexpLoadImageSave, (DWORD)XexpLoadImageHook);
 	}
 	else if(XboxKrnlVersion->Build == 6717)
 	{
-		cprintf("[BladesDL] [HOOK] Applying LoaderPrep Hook...");
-		hookFunctionStart((PDWORD)XAM_LOADERPREP_ADDR_6717, (PDWORD)loadPrepSave, (DWORD)LoaderPrepHook);
+		hookFunctionStart((PDWORD)KERNEL_XEXP_LOAD_IMAGE_ADDR_6717, (PDWORD)XexpLoadImageSave, (DWORD)XexpLoadImageHook);
 	}
 	else
 	{
