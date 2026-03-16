@@ -32,6 +32,12 @@
     <ClInclude Include="Patches.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ini.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="INIReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -49,9 +55,16 @@
     <ClCompile Include="Patches.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ini.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="INIReader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="BladesDL.xml" />
     <None Include="Exports.def" />
+    <None Include="launch.ini" />
   </ItemGroup>
 </Project>

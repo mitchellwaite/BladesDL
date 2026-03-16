@@ -253,6 +253,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Hooks.h" />
+    <ClInclude Include="ini.h" />
+    <ClInclude Include="INIReader.h" />
     <ClInclude Include="kernel.h" />
     <ClInclude Include="Patches.h" />
     <ClInclude Include="stdafx.h" />
@@ -262,6 +264,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Hooks.cpp" />
+    <ClCompile Include="ini.c" />
+    <ClCompile Include="INIReader.cpp" />
     <ClCompile Include="Patches.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Xbox 360'">Create</PrecompiledHeader>
@@ -277,6 +281,7 @@
   <ItemGroup>
     <None Include="BladesDL.xml" />
     <None Include="Exports.def" />
+    <None Include="launch.ini" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
