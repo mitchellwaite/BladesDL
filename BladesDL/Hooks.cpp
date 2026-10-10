@@ -124,7 +124,8 @@ VOID __declspec(naked) DnsLookupSaveVar(VOID)
 }
 DNSLOOKUPSAVEFUN DnsLookupSave = (DNSLOOKUPSAVEFUN)DnsLookupSaveVar;
 
-NTSTATUS DnsLookupHook(XNCALLER_TYPE xnc, const char* pszHost, WSAEVENT hEvent, XNDNS** ppxndns)
+XNDNS dummyDnsReply;
+NTSTATUS DnsLookupHook(XNCALLER_TYPE xnc, const char* pszHost, WSAEVENT hEvent, XNDNS** ppXNDns)
 {
 	const char* LiveBlockList[] = {
 	"xemacs.xboxlive.com",
@@ -143,16 +144,27 @@ NTSTATUS DnsLookupHook(XNCALLER_TYPE xnc, const char* pszHost, WSAEVENT hEvent, 
 	"rad.msn.com"
 	};
 
-	for (int i = 0; i < ARRAYSIZE(LiveBlockList); i++) {
+	for (int i = 0; i < ARRAYSIZE(LiveBlockList); i++)
+	{
 		if (strcmpi(pszHost, LiveBlockList[i]) == 0)
 		{
 			cprintf("[BladesDL] [LIVEBLOCK] Lookup address %s is on our 'LiveBlock' block list!", LiveBlockList[i]);
-			return DnsLookupSave(xnc, "live.block\0", hEvent, ppxndns);
-		}
+			
+			dummyDnsReply.iStatus = WSAHOST_NOT_FOUND;
+			dummyDnsReply.cina = 0;
+			dummyDnsReply.aina[0].S_un.S_addr = INADDR_LOOPBACK;
+			ppXNDns[0] = &dummyDnsReply;
 
+			if(hEvent != NULL)
+			{
+				WSASetEvent(hEvent);
+			}
+
+			return S_OK;
+		}
 	}
 
-	return DnsLookupSave(xnc, pszHost, hEvent, ppxndns);
+	return DnsLookupSave(xnc, pszHost, hEvent, ppXNDns);
 }
 
 VOID SetupDNSHook()
