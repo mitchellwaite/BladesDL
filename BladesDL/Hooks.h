@@ -4,11 +4,10 @@
 #ifndef _HOOKS_H
 #define _HOOKS_H
 
-VOID SetupMemoryProtectionToggleHook();
+VOID SetupDevRetailKeyToggleHook();
 VOID SetupDNSHook();
 VOID SetupXamCheckExecPrivHook();
 VOID SetupkeBugCheckExHook();
-VOID SetupHeaderVerificationToggleHook();
 
 // Strings
 #define XBOX_XEX		"\\Device\\Harddisk0\\SystemPartition\\Compatibility"
@@ -18,10 +17,6 @@ VOID SetupHeaderVerificationToggleHook();
 #define KERNEL_XEXP_LOAD_IMAGE_ADDR_1888           0x80065948 // XexpLoadImage
 #define KERNEL_XEXP_LOAD_IMAGE_ADDR_6717           0x80078140
 #define KERNEL_XEXP_LOAD_IMAGE_ADDR_6770           KERNEL_XEXP_LOAD_IMAGE_ADDR_6717 // same address in 6717 and 6770
-
-#define KERNEL_XEXP_VERIFY_HEADER_ADDR_1888        0x80063460 // XexpVerifyImageHeaders
-#define KERNEL_XEXP_VERIFY_HEADER_ADDR_6717        0x80076BA8 // XexpVerifyXexHeaders
-#define KERNEL_XEXP_VERIFY_HEADER_ADDR_6770        KERNEL_XEXP_VERIFY_HEADER_ADDR_6717 // same address in 6717 and 6770
 
 // Ordinals
 #define keBugCheckEx_ORD			83

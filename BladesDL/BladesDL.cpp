@@ -101,8 +101,7 @@ BOOL WINAPI DllMain(HANDLE hInstDLL, DWORD fdwReason, LPVOID lpReserved)
 		cprintf("[BladesDL] Detected Kernel Version: %d", XboxKrnlVersion->Build);
 
 		SetupDNSHook();
-		SetupMemoryProtectionToggleHook();
-		SetupHeaderVerificationToggleHook();
+		SetupDevRetailKeyToggleHook();
 		SetupkeBugCheckExHook();
 		SetupXamCheckExecPrivHook();
 		PatchUpdStrings();

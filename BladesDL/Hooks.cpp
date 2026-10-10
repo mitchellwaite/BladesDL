@@ -1,31 +1,6 @@
 #include "stdafx.h"
 
-//=============================================================================================================================================
-//		Hook used to catch the XB1 emulator load
-//		Will toggle the Mem protection on/off to prevent the crash
-//=============================================================================================================================================
-void toggleMemProtection(char * xex)
-{
-	if (strncmp(xex, XBOX_XEX, strlen(XBOX_XEX)) == 0)
-	{
-		//HvxSetState(SET_PROT_ON);
-		HvxGetVersions(FREEBOOT_SYSCALL_KEY, SET_PROT_ON);
-		g_Protection = PROTECT_ON;
-		__dcbst(0, &g_Protection);
-		__sync();
-	}
-	else if (strcmp(xex, DASH_XEX) == 0)
-	{
-		if (g_Protection)
-		{
-			//HvxSetState(SET_PROT_OFF);
-			HvxGetVersions(FREEBOOT_SYSCALL_KEY, SET_PROT_OFF);
-			g_Protection = PROTECT_OFF;
-			__dcbst(0, &g_Protection);
-			__sync();
-		}
-	}
-}
+#pragma region DevRetailKeyToggle
 
 void toggleFallbackXexKeyOnFailure()
 {
@@ -74,8 +49,8 @@ void toggleFallbackXexKeyOnFailure()
 	}
 }
 
-#pragma region OGXFix
-VOID __declspec(naked) MemProtToggleSaveVar(VOID)
+
+VOID __declspec(naked) DevRetailKeyToggleSaveVar(VOID)
 {
 	__asm{
 		li r3, MEM_PROT_TOGGLE_VAL
@@ -90,12 +65,10 @@ VOID __declspec(naked) MemProtToggleSaveVar(VOID)
 }
 
 typedef NTSTATUS (*XEXPLOADIMAGEFUN)(LPCSTR xexName, DWORD typeInfo, DWORD ver, PHANDLE modHandle); // XexpLoadImage
-XEXPLOADIMAGEFUN XexpLoadImageSave = (XEXPLOADIMAGEFUN)MemProtToggleSaveVar;
+XEXPLOADIMAGEFUN XexpLoadImageSave = (XEXPLOADIMAGEFUN)DevRetailKeyToggleSaveVar;
 
 NTSTATUS XexpLoadImageHook(LPCSTR xex, DWORD typeInfo, DWORD ver, PHANDLE modHandle)
 {
-	toggleMemProtection((char *)xex);
-
 	NTSTATUS ret = XexpLoadImageSave(xex, typeInfo, ver, modHandle);
 
 	if( !NT_SUCCESS(ret) )
@@ -107,11 +80,10 @@ NTSTATUS XexpLoadImageHook(LPCSTR xex, DWORD typeInfo, DWORD ver, PHANDLE modHan
 	return ret;
 }
 
-VOID SetupMemoryProtectionToggleHook()
+VOID SetupDevRetailKeyToggleHook()
 {
-	cprintf("[BladesDL] [HOOK] Applying XexpLoadImage Hook...");
+	cprintf("[BladesDL] [HOOK] Applying devkit/retail key toggle hook...");
 
-	// using this to catch dash.xex and xbox emu loading
 	if(XboxKrnlVersion->Build == 1888)
 	{
 		hookFunctionStart((PDWORD)KERNEL_XEXP_LOAD_IMAGE_ADDR_1888, (PDWORD)XexpLoadImageSave, (DWORD)XexpLoadImageHook);
@@ -126,86 +98,10 @@ VOID SetupMemoryProtectionToggleHook()
 	}
 	else
 	{
-		cprintf("[BladesDL] [HOOK] Unsupported kernel: %d, skipping memory protection toggle hook", XboxKrnlVersion->Build);
+		cprintf("[BladesDL] [HOOK] Unsupported kernel: %d, skipping devkit/retail key toggle hook", XboxKrnlVersion->Build);
 	}
 }
 #pragma endregion
-//=============================================================================================================================================
-
-#pragma region XexpVerifyImageHeaderToggle
-VOID __declspec(naked) XexpVerifyImageHeadersSaveVar(VOID)
-{
-	__asm{
-		li r3, XEXP_VERIFY_HEADER_VAL
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		blr
-	}
-}
-
-typedef NTSTATUS (*XEXPVERIFYIMAGEHEADERSFUN)(PHANDLE modHandle); // XexpVerifyImageHeaders
-XEXPVERIFYIMAGEHEADERSFUN XexpVerifyImageHeadersSave = (XEXPVERIFYIMAGEHEADERSFUN)XexpVerifyImageHeadersSaveVar;
-
-NTSTATUS XexpVerifyImageHeadersHook(PHANDLE modHandle)
-{
-	NTSTATUS ret = XexpVerifyImageHeadersSave(modHandle);
-
-	if( !NT_SUCCESS(ret) )
-	{
-		toggleFallbackXexKeyOnFailure();
-
-		return XexpVerifyImageHeadersSave(modHandle);
-	}
-
-	return ret;
-}
-
-typedef NTSTATUS (*XEXPVERIFYXEXHEADERSFUN)(QWORD param_1, QWORD param_2, PDWORD param_3); // XexpVerifyXexHeaders
-XEXPVERIFYXEXHEADERSFUN XexpVerifyXexHeadersSave = (XEXPVERIFYXEXHEADERSFUN)XexpVerifyImageHeadersSaveVar;
-
-NTSTATUS XexpVerifyXexHeadersHook(QWORD param_1, QWORD param_2, PDWORD param_3)
-{
-	NTSTATUS ret = XexpVerifyXexHeadersSave(param_1, param_2, param_3);
-
-	if( !NT_SUCCESS(ret) )
-	{
-		toggleFallbackXexKeyOnFailure();
-
-		return XexpVerifyXexHeadersSave(param_1, param_2, param_3);
-	}
-
-	return ret;
-}
-
-VOID SetupHeaderVerificationToggleHook()
-{
-	// using this to catch dash.xex and xbox emu loading
-	if(XboxKrnlVersion->Build == 1888)
-	{
-		cprintf("[BladesDL] [HOOK] Applying XexpVerifyImageHeaders Hook...");
-		hookFunctionStart((PDWORD)KERNEL_XEXP_VERIFY_HEADER_ADDR_1888, (PDWORD)XexpVerifyImageHeadersSave, (DWORD)XexpVerifyImageHeadersHook);
-	}
-	else if(XboxKrnlVersion->Build == 6717)
-	{
-		cprintf("[BladesDL] [HOOK] Applying XexpVerifyXexHeaders Hook...");
-		hookFunctionStart((PDWORD)KERNEL_XEXP_VERIFY_HEADER_ADDR_6717, (PDWORD)XexpVerifyXexHeadersSave, (DWORD)XexpVerifyXexHeadersHook);
-	}
-	else if(XboxKrnlVersion->Build == 6770)
-	{
-		cprintf("[BladesDL] [HOOK] Applying XexpVerifyXexHeaders Hook...");
-		hookFunctionStart((PDWORD)KERNEL_XEXP_VERIFY_HEADER_ADDR_6770, (PDWORD)XexpVerifyXexHeadersSave, (DWORD)XexpVerifyXexHeadersHook);
-	}
-	else
-	{
-		cprintf("[BladesDL] [HOOK] Unsupported kernel: %d, skipping header verification hook", XboxKrnlVersion->Build);
-	}
-}
-#pragma endregion
-
 
 //=============================================================================================================================================
 //		LIVEBLOCK
